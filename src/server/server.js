@@ -11,10 +11,8 @@ const { ensureAutenticated } = require("../config/auth");
 
 const app = express();
 
-// Passport config
 require("../config/passport")(passport);
 
-// Connect to Mongo
 mongoose
   .connect(
     "mongodb://localhost:27017/item_list",
@@ -23,11 +21,9 @@ mongoose
   .then(() => console.log("MongoDB Connected..."))
   .catch(err => console.log(err));
 
-// Bodyparser
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session
 app.use(
   session({
     secret: "lost&found",
@@ -36,29 +32,24 @@ app.use(
   })
 );
 
-// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Async Error Handle
 app.use(error);
 
-// Register Handle
 app.post("/register", (req, res) => {
   const { email, password, password2 } = req.body;
   let errors = [];
 
-  // Check required fields
   if (!email || !password || !password2) {
     errors.push({ msg: "Please fill in all fields" });
   }
 
-  // Check passwords match
   if (password !== password2) {
     errors.push({ msg: "Passwords do not match" });
   }
 
-  // Check pass length
   if (password.length < 6) {
     errors.push({ msg: "Password should be at least 6 characters" });
   }
@@ -87,7 +78,6 @@ app.post("/register", (req, res) => {
           password
         });
 
-        // Hash Password
         bcrypt.genSalt(10, (err, salt) =>
           bcrypt.hash(newUser.password, salt, (err, hash) => {
             if (err) throw err;
@@ -107,7 +97,6 @@ app.post("/register", (req, res) => {
   }
 });
 
-// Login Handle
 app.post("/login", (req, res, next) => {
   passport.authenticate("local", {
     successRedirect: `/userList/${req.body.email}`,
@@ -115,7 +104,6 @@ app.post("/login", (req, res, next) => {
   })(req, res, next);
 });
 
-// Get user handler
 app.get("/userList/:email", ensureAutenticated, async (req, res) => {
   if (req.params.email) {
     User.findOne({ email: req.params.email }, (err, user) => {
@@ -125,24 +113,19 @@ app.get("/userList/:email", ensureAutenticated, async (req, res) => {
   }
 })
 
-// Failed login handler
 app.get("/loginFailed", (req, res) => {
   res.send({ error: 1000, message: "Login failed!"})
 })
 
-// Logout Handle
 app.get('/logout', (req, res) => {
   req.logout();
   res.send({error: 0, message: "You are loged out"});
 })
 
-
-// Root
 app.get("/", (req, res) => {
   res.json({ info: "lost&found version1.0" });
 });
 
-// Add Item Handle
 app.post("/addItem", ensureAutenticated, async (req, res) => {
   let newItem = new Item(req.body);
   await newItem.save(err => {
@@ -151,14 +134,12 @@ app.post("/addItem", ensureAutenticated, async (req, res) => {
   });
 });
 
-// Get Item List Handle
 app.get("/itemList", async (req, res) => {
   await Item.find({}, (err, list) => {
     if (err) return res.send(err);
     return res.send({ error: 0, message: "respond with item list", list });
   });
 });
-
 
 const port = process.env.PORT || 8000;
 app.listen(port, () => console.log(`app listening on port ${port}...`));
